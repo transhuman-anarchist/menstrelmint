@@ -732,6 +732,29 @@
 </style>
 </head>
 <body>
+<!-- ══════════════════════════════════════
+     PASSWORD GATE
+══════════════════════════════════════ -->
+<div id="screen-password" style="position:fixed;inset:0;z-index:999;background:#080808;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;">
+  <svg width="60" height="60" viewBox="0 0 120 120" fill="none" style="margin-bottom:2rem;opacity:0.4"><circle cx="60" cy="60" r="55" stroke="#8b0000" stroke-width="0.5"/><polygon points="60,8 112,90 8,90" fill="none" stroke="#8b0000" stroke-width="0.5"/><polygon points="60,112 8,30 112,30" fill="none" stroke="#8b0000" stroke-width="0.5"/><circle cx="60" cy="60" r="4" fill="#8b0000"/></svg>
+  <p style="font-size:0.6rem;letter-spacing:0.4em;color:#6b6258;margin-bottom:2rem;text-transform:uppercase">accesso riservato</p>
+  <input id="pw-input" type="password" style="background:transparent;border:none;border-bottom:1px solid #2a2a2a;color:#d4c9b8;font-family:'Share Tech Mono',monospace;font-size:1rem;letter-spacing:0.2em;padding:0.6rem 0;width:220px;text-align:center;outline:none;" placeholder="password" onkeydown="if(event.key==='Enter') checkPassword()"/>
+  <p id="pw-error" style="color:#c41e3a;font-size:0.6rem;letter-spacing:0.1em;margin-top:1rem;min-height:1rem"></p>
+  <button onclick="checkPassword()" style="margin-top:1.5rem;padding:0.7rem 2rem;background:transparent;border:1px solid #8b0000;color:#d4c9b8;font-family:'Share Tech Mono',monospace;font-size:0.65rem;letter-spacing:0.3em;text-transform:uppercase;cursor:pointer;">&#9658; entra</button>
+</div>
+<script>
+function checkPassword(){
+  if(document.getElementById('pw-input').value==='bastaorion'){
+    document.getElementById('screen-password').style.display='none';
+    sessionStorage.setItem('mnauth','1');
+  } else {
+    document.getElementById('pw-error').textContent='▸ accesso negato';
+    document.getElementById('pw-input').value='';
+  }
+}
+if(sessionStorage.getItem('mnauth')==='1')document.getElementById('screen-password').style.display='none';
+</script>
+
 
 <!-- ══════════════════════════════════════
      LANDING
