@@ -729,6 +729,116 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); }
+
+  /* ── TOAST NOTIFICATIONS ── */
+  #toast-container {
+    position: fixed; top: 1.5rem; right: 1.5rem;
+    z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem;
+    pointer-events: none; max-width: 300px;
+  }
+  .toast {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    padding: 0.7rem 1.2rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: var(--text);
+    opacity: 0;
+    transform: translateX(16px);
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .toast.show { opacity: 1; transform: translateX(0); }
+
+  /* ── MEMBER CARDS ── */
+  .member-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .member-name {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--gold);
+    letter-spacing: 0.15em;
+    min-width: 120px;
+  }
+  .member-you {
+    color: var(--text-dim);
+    font-size: 0.55rem;
+    margin-left: 0.4rem;
+  }
+  .member-stats {
+    display: flex; gap: 1.5rem; flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+  .member-stat-val { color: var(--text); }
+
+  /* ── PROFILE PANEL ── */
+  #profile-panel {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    animation: slideDown 0.2s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .profile-inner {
+    max-width: 480px;
+    display: flex; flex-direction: column; gap: 0.6rem;
+  }
+  .profile-row {
+    display: flex; align-items: center; gap: 1rem;
+    font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em;
+  }
+  .profile-label {
+    color: var(--text-dim); min-width: 110px; text-transform: uppercase;
+    font-size: 0.55rem; letter-spacing: 0.2em;
+  }
+  .profile-value { color: var(--text); }
+  .profile-divider {
+    height: 1px; background: var(--border); margin: 0.4rem 0;
+  }
+  .profile-pin {
+    color: var(--gold); letter-spacing: 0.4em; font-size: 0.75rem;
+    font-family: var(--font-mono); min-width: 60px;
+  }
+  .pin-reveal-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text-dim); font-family: var(--font-mono);
+    font-size: 0.5rem; letter-spacing: 0.15em;
+    padding: 0.2rem 0.6rem; cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .pin-reveal-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .profile-pin-note {
+    font-family: var(--font-mono); font-size: 0.5rem;
+    color: var(--text-dim); letter-spacing: 0.1em;
+    margin: 0; opacity: 0.6;
+  }
+  .app-user {
+    background: none; border: none; cursor: pointer;
+  }
+
+  /* ── PIN SCREEN EXTRA ── */
+  .pin-note {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+    text-align: center;
+    max-width: 260px;
+  }
 </style>
 </head>
 <body>
@@ -784,16 +894,23 @@ if(sessionStorage.getItem('mnauth')==='1')document.getElementById('screen-passwo
 
 <!-- ══════════════════════════════════════
      NICKNAME
-══════════════════════════════════════ -->
 <div id="screen-nickname">
   <h2 class="nick-title">Chi sei</h2>
-  <p class="nick-sub">scegli un nome ∴ sarà permanente</p>
+  <p class="nick-sub" id="nick-sub-text">scegli un nome ∴ sarà permanente</p>
   <input type="text" class="nick-input" id="nick-input"
     placeholder="il tuo nome nella band"
     maxlength="20"
     onkeydown="if(event.key==='Enter') confirmNick()"/>
+  <input type="password" class="nick-input" id="pin-input"
+    placeholder="• • • •"
+    maxlength="4"
+    inputmode="numeric"
+    style="display:none; margin-top:1rem; letter-spacing:0.6em; font-size:1.4rem;"
+    onkeydown="if(event.key==='Enter') confirmPin()"/>
+  <p class="pin-note" id="pin-note" style="display:none"></p>
   <p class="nick-error" id="nick-error"></p>
-  <button class="nick-btn" onclick="confirmNick()">▸ conferma</button>
+  <button class="nick-btn" id="nick-btn" onclick="confirmNick()">▸ conferma</button>
+</div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -802,8 +919,41 @@ if(sessionStorage.getItem('mnauth')==='1')document.getElementById('screen-passwo
 <div id="screen-app">
   <header class="app-header">
     <span class="app-band-name">Menstrelmint</span>
-    <span class="app-user">▸ <span id="display-nick"></span></span>
+    <button class="app-user" onclick="toggleProfile()" title="il tuo profilo">▸ <span id="display-nick"></span> <span style="font-size:0.5rem;opacity:0.5">▾</span></button>
   </header>
+
+  <!-- PROFILE PANEL -->
+  <div id="profile-panel" style="display:none">
+    <div class="profile-inner">
+      <div class="profile-row">
+        <span class="profile-label">nome</span>
+        <span class="profile-value" id="profile-nick-display"></span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">membro dal</span>
+        <span class="profile-value" id="profile-joined"></span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">proposte</span>
+        <span class="profile-value" id="profile-stat-proposals">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">modifiche</span>
+        <span class="profile-value" id="profile-stat-changes">0</span>
+      </div>
+      <div class="profile-row">
+        <span class="profile-label">voti espressi</span>
+        <span class="profile-value" id="profile-stat-votes">0</span>
+      </div>
+      <div class="profile-divider"></div>
+      <div class="profile-row">
+        <span class="profile-label">PIN</span>
+        <span class="profile-pin" id="profile-pin">••••</span>
+        <button class="pin-reveal-btn" id="pin-reveal-btn" onclick="togglePinReveal()">mostra</button>
+      </div>
+      <p class="profile-pin-note">il PIN è salvato solo su questo dispositivo</p>
+    </div>
+  </div>
 
   <div class="main-tabs">
     <button class="tab-btn active" onclick="switchTab('proposals', this)">
@@ -811,6 +961,9 @@ if(sessionStorage.getItem('mnauth')==='1')document.getElementById('screen-passwo
     </button>
     <button class="tab-btn" onclick="switchTab('approved', this)">
       approvate ▸ <span id="count-approved">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('members', this)">
+      membri ▸ <span id="count-members">0</span>
     </button>
   </div>
 
@@ -837,6 +990,15 @@ if(sessionStorage.getItem('mnauth')==='1')document.getElementById('screen-passwo
         <span class="section-count" id="approved-sub"></span>
       </div>
       <div class="proposals-grid" id="approved-list"></div>
+    </div>
+
+    <!-- MEMBERS TAB -->
+    <div id="tab-members" style="display:none">
+      <div class="section-header">
+        <h2 class="section-title">Membri</h2>
+        <span class="section-count" id="members-sub"></span>
+      </div>
+      <div class="proposals-grid" id="members-list"></div>
     </div>
 
   </div>
@@ -917,33 +1079,97 @@ let currentNick = localStorage.getItem('mnick') || null;
 let currentTab  = 'proposals';
 let activeFilter = { proposals: 'all', approved: 'all' };
 let db, dbRef, dbSet, dbGet, dbOnValue, dbPush, dbUpdate, dbRemove;
+let _members = {}, _proposals = {}, _approved = {};
+let _lastNotifTime = Date.now();
+let _pendingUsername = null;
 
 const CATEGORIES = ['riff','liriche','identità','canzone','struttura','arrangiamento','altro'];
 const CAT_LABELS = {
   riff:'Riff', liriche:'Liriche', identità:'Identità',
   canzone:'Canzone', struttura:'Struttura', arrangiamento:'Arrangiamento', altro:'Altro'
 };
-const THRESHOLD   = 7.5;
+const THRESHOLD    = 7.5;
 const CHANGE_DELTA = 0.5;
 const PROPOSER_CAP = 8.5;
+
+// ═══════════════════════════════════════════════════
+// CRYPTO UTILS
+// ═══════════════════════════════════════════════════
+async function hashPin(pin) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode('mnstrelmint_salt_' + pin);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generatePin() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+// ═══════════════════════════════════════════════════
+// TOAST NOTIFICATIONS
+// ═══════════════════════════════════════════════════
+function showToast(msg, color = 'var(--red)') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.style.borderLeftColor = color;
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => el.classList.add('show'));
+  });
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 400);
+  }, 3500);
+}
+
+async function pushNotif(msg, color) {
+  const r = dbPush(dbRef(db, 'notifications'));
+  await dbSet(r, { msg, by: currentNick, at: Date.now(), color: color || null });
+  // Trim to last 30
+  const snap = await dbGet(dbRef(db, 'notifications'));
+  const keys = Object.keys(snap.val() || {});
+  if (keys.length > 30) {
+    const toDelete = keys.slice(0, keys.length - 30);
+    for (const k of toDelete) await dbRemove(dbRef(db, `notifications/${k}`));
+  }
+}
 
 // ═══════════════════════════════════════════════════
 // FIREBASE INIT
 // ═══════════════════════════════════════════════════
 function initFirebase() {
-  db = window._db;
-  dbRef = window._dbRef;
-  dbSet = window._dbSet;
-  dbGet = window._dbGet;
+  db      = window._db;
+  dbRef   = window._dbRef;
+  dbSet   = window._dbSet;
+  dbGet   = window._dbGet;
   dbOnValue = window._dbOnValue;
-  dbPush = window._dbPush;
+  dbPush  = window._dbPush;
   dbUpdate = window._dbUpdate;
   dbRemove = window._dbRemove;
 }
 
-document.addEventListener('firebaseReady', () => {
+document.addEventListener('firebaseReady', async () => {
   initFirebase();
-  if (currentNick) startApp();
+  if (currentNick) {
+    // Verify stored hash still matches Firebase
+    const storedHash = localStorage.getItem('mpin_hash');
+    const snap = await dbGet(dbRef(db, `members/${currentNick}`));
+    if (snap.exists()) {
+      const member = snap.val();
+      if (!member.pinHash || member.pinHash === storedHash) {
+        startApp();
+        return;
+      }
+    }
+    // Mismatch — force re-login
+    localStorage.removeItem('mnick');
+    localStorage.removeItem('mpin_hash');
+    currentNick = null;
+  }
 });
 
 // ═══════════════════════════════════════════════════
@@ -966,17 +1192,91 @@ function enterApp() {
 async function confirmNick() {
   const val = document.getElementById('nick-input').value.trim();
   const err = document.getElementById('nick-error');
+  err.textContent = '';
   if (!val) { err.textContent = '▸ inserisci un nome'; return; }
-  if (!db) { err.textContent = '▸ firebase non connesso'; return; }
+  if (!db)  { err.textContent = '▸ firebase non connesso'; return; }
 
   const snap = await dbGet(dbRef(db, `members/${val}`));
-  if (snap.exists()) {
-    err.textContent = '▸ nome già in uso';
+
+  if (!snap.exists()) {
+    // NEW USER — generate PIN, hash it, store
+    const pin = generatePin();
+    const pinHash = await hashPin(pin);
+    await dbSet(dbRef(db, `members/${val}`), { joinedAt: Date.now(), pinHash });
+    localStorage.setItem('mnick', val);
+    localStorage.setItem('mpin_hash', pinHash);
+    currentNick = val;
+
+    cacheNewPin(pin);
+    err.style.color = 'var(--gold)';
+    err.textContent = `▸ benvenuto. il tuo PIN è: ${pin}  — lo trovi anche nel tuo profilo finché non chiudi la pagina.`;
+    setTimeout(() => {
+      err.textContent = '';
+      err.style.color = '';
+      document.getElementById('screen-nickname').classList.remove('active');
+      showApp();
+    }, 5000);
+
+  } else {
+    // EXISTING USER — ask PIN
+    const member = snap.val();
+    _pendingUsername = val;
+
+    if (!member.pinHash) {
+      // Legacy user with no PIN — assign one now
+      const pin = generatePin();
+      const pinHash = await hashPin(pin);
+      await dbUpdate(dbRef(db, `members/${val}`), { pinHash });
+      cacheNewPin(pin);
+      err.style.color = 'var(--gold)';
+      err.textContent = `▸ primo accesso con il nuovo sistema. PIN assegnato: ${pin} — lo trovi nel profilo finché non chiudi la pagina.`;
+      setTimeout(async () => {
+        err.textContent = '';
+        err.style.color = '';
+        localStorage.setItem('mnick', val);
+        localStorage.setItem('mpin_hash', pinHash);
+        currentNick = val;
+        document.getElementById('screen-nickname').classList.remove('active');
+        showApp();
+      }, 5000);
+      return;
+    }
+
+    // Show PIN input
+    document.getElementById('nick-sub-text').textContent = 'nome riconosciuto — inserisci il tuo PIN';
+    document.getElementById('nick-input').style.display = 'none';
+    document.getElementById('pin-input').style.display = '';
+    document.getElementById('pin-input').focus();
+    const note = document.getElementById('pin-note');
+    note.style.display = '';
+    note.textContent = '4 cifre — assegnato alla registrazione';
+    const btn = document.getElementById('nick-btn');
+    btn.textContent = '▸ accedi';
+    btn.onclick = confirmPin;
+  }
+}
+
+async function confirmPin() {
+  const entered = document.getElementById('pin-input').value.trim();
+  const err = document.getElementById('nick-error');
+  err.textContent = '';
+  if (!entered || entered.length < 4) { err.textContent = '▸ PIN a 4 cifre'; return; }
+
+  const snap = await dbGet(dbRef(db, `members/${_pendingUsername}`));
+  if (!snap.exists()) { err.textContent = '▸ errore interno'; return; }
+
+  const enteredHash = await hashPin(entered);
+  const storedHash  = snap.val().pinHash;
+
+  if (enteredHash !== storedHash) {
+    err.textContent = '▸ PIN errato';
+    document.getElementById('pin-input').value = '';
     return;
   }
-  await dbSet(dbRef(db, `members/${val}`), { joinedAt: Date.now() });
-  localStorage.setItem('mnick', val);
-  currentNick = val;
+
+  localStorage.setItem('mnick', _pendingUsername);
+  localStorage.setItem('mpin_hash', enteredHash);
+  currentNick = _pendingUsername;
   document.getElementById('screen-nickname').classList.remove('active');
   showApp();
 }
@@ -995,20 +1295,35 @@ function startApp() {
   buildCatFilters();
 
   dbOnValue(dbRef(db, 'proposals'), snap => {
-    const data = snap.val() || {};
-    renderProposals(data);
+    _proposals = snap.val() || {};
+    renderProposals(_proposals);
+    renderMembers();
   });
 
   dbOnValue(dbRef(db, 'approved'), snap => {
-    const data = snap.val() || {};
-    renderApproved(data);
+    _approved = snap.val() || {};
+    renderApproved(_approved);
+    renderMembers();
   });
 
   dbOnValue(dbRef(db, 'members'), snap => {
-    const data = snap.val() || {};
-    const count = Object.keys(data).length;
+    _members = snap.val() || {};
+    const count = Object.keys(_members).length;
     document.getElementById('status-members').textContent =
-      `${count} membro${count!==1?'i':''}`;
+      `${count} membro${count !== 1 ? 'i' : ''}`;
+    renderMembers();
+  });
+
+  // Notifications listener
+  _lastNotifTime = Date.now();
+  dbOnValue(dbRef(db, 'notifications'), snap => {
+    const data = snap.val() || {};
+    Object.values(data).forEach(n => {
+      if (n.at > _lastNotifTime && n.by !== currentNick) {
+        showToast(n.msg, n.color || 'var(--red)');
+        if (n.at > _lastNotifTime) _lastNotifTime = n.at;
+      }
+    });
   });
 }
 
@@ -1030,9 +1345,8 @@ function setFilter(tab, cat, btn) {
   const container = document.getElementById(`cat-filter-${tab}`);
   container.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
-  // re-render will happen via onValue, but trigger manually
-  if (tab === 'proposals') dbOnValue(dbRef(db,'proposals'), snap => renderProposals(snap.val()||{}));
-  else dbOnValue(dbRef(db,'approved'), snap => renderApproved(snap.val()||{}));
+  if (tab === 'proposals') renderProposals(_proposals);
+  else renderApproved(_approved);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1047,47 +1361,91 @@ function computeAvg(votes) {
 function renderProposals(data) {
   const list = document.getElementById('proposals-list');
   let items = Object.entries(data).map(([id, p]) => ({ id, ...p }));
-
-  // Filter
   const f = activeFilter.proposals;
   if (f !== 'all') items = items.filter(p => p.category === f);
-
-  // Sort by avg desc
   items.sort((a,b) => (computeAvg(b.votes)||0) - (computeAvg(a.votes)||0));
 
   document.getElementById('count-proposals').textContent = items.length;
   document.getElementById('proposals-sub').textContent =
-    `${items.length} idea${items.length!==1?'e':''}`;
+    `${items.length} idea${items.length !== 1 ? 'e' : ''}`;
 
-  if (!items.length) {
-    list.innerHTML = `<div class="empty-state">— nessuna proposta —</div>`;
-    return;
-  }
-
-  list.innerHTML = items.map((p, i) => proposalCardHTML(p, i, false)).join('');
+  list.innerHTML = items.length
+    ? items.map((p, i) => proposalCardHTML(p, i, false)).join('')
+    : `<div class="empty-state">— nessuna proposta —</div>`;
 }
 
 function renderApproved(data) {
   const list = document.getElementById('approved-list');
   let items = Object.entries(data).map(([id, p]) => ({ id, ...p }));
-
   const f = activeFilter.approved;
   if (f !== 'all') items = items.filter(p => p.category === f);
-
   items.sort((a,b) => (computeAvg(b.votes)||0) - (computeAvg(a.votes)||0));
 
   document.getElementById('count-approved').textContent = items.length;
   document.getElementById('approved-sub').textContent =
-    `${items.length} idea${items.length!==1?'e':''}`;
+    `${items.length} idea${items.length !== 1 ? 'e' : ''}`;
 
-  if (!items.length) {
-    list.innerHTML = `<div class="empty-state">— nessuna idea approvata —</div>`;
-    return;
-  }
-
-  list.innerHTML = items.map((p, i) => proposalCardHTML(p, i, true)).join('');
+  list.innerHTML = items.length
+    ? items.map((p, i) => proposalCardHTML(p, i, true)).join('')
+    : `<div class="empty-state">— nessuna idea approvata —</div>`;
 }
 
+// ═══════════════════════════════════════════════════
+// RENDER MEMBERS
+// ═══════════════════════════════════════════════════
+function renderMembers() {
+  const list = document.getElementById('members-list');
+  if (!list) return;
+
+  const stats = {};
+  for (const nick of Object.keys(_members)) {
+    stats[nick] = { proposals: 0, changes: 0, votes: 0 };
+  }
+
+  for (const p of Object.values(_proposals)) {
+    if (stats[p.proposer] !== undefined) stats[p.proposer].proposals++;
+    for (const nick of Object.keys(p.votes || {})) {
+      if (stats[nick] !== undefined) stats[nick].votes++;
+    }
+  }
+  for (const p of Object.values(_approved)) {
+    if (stats[p.proposer] !== undefined) stats[p.proposer].proposals++;
+    for (const nick of Object.keys(p.votes || {})) {
+      if (stats[nick] !== undefined) stats[nick].votes++;
+    }
+    for (const c of Object.values(p.changeProposals || {})) {
+      if (stats[c.proposer] !== undefined) stats[c.proposer].changes++;
+      for (const nick of Object.keys(c.votes || {})) {
+        if (stats[nick] !== undefined) stats[nick].votes++;
+      }
+    }
+  }
+
+  const sorted = Object.entries(stats).sort((a, b) => {
+    const sa = a[1].proposals + a[1].changes + a[1].votes;
+    const sb = b[1].proposals + b[1].changes + b[1].votes;
+    return sb - sa;
+  });
+
+  const total = Object.keys(_members).length;
+  document.getElementById('count-members').textContent = total;
+  document.getElementById('members-sub').textContent =
+    `${total} membro${total !== 1 ? 'i' : ''}`;
+
+  list.innerHTML = sorted.map(([nick, s]) => `
+    <div class="member-card">
+      <span class="member-name">${esc(nick)}${nick === currentNick ? '<span class="member-you">◂ tu</span>' : ''}</span>
+      <div class="member-stats">
+        <span>proposte: <span class="member-stat-val">${s.proposals}</span></span>
+        <span>modifiche: <span class="member-stat-val">${s.changes}</span></span>
+        <span>voti: <span class="member-stat-val">${s.votes}</span></span>
+      </div>
+    </div>`).join('') || '<div class="empty-state">— nessun membro —</div>';
+}
+
+// ═══════════════════════════════════════════════════
+// PROPOSAL CARD HTML
+// ═══════════════════════════════════════════════════
 function proposalCardHTML(p, rank, isApproved) {
   const avg = computeAvg(p.votes);
   const voteCount = Object.keys(p.votes || {}).length;
@@ -1095,7 +1453,7 @@ function proposalCardHTML(p, rank, isApproved) {
   const rankClass = rank===0?'rank-1':rank===1?'rank-2':rank===2?'rank-3':'';
   const pct = avg ? Math.min((avg/10)*100, 100) : 0;
 
-  const voteSection = isApproved ? '' : buildVoteSection(p, myVote);
+  const voteSection   = isApproved ? '' : buildVoteSection(p, myVote);
   const changeSection = isApproved ? buildChangeSection(p) : '';
 
   return `
@@ -1193,8 +1551,8 @@ async function castVote(proposalId) {
   const score = parseFloat(slider.value);
 
   await dbUpdate(dbRef(db, `proposals/${proposalId}/votes`), { [currentNick]: score });
+  showToast(`▸ voto registrato: ${score}`, 'var(--gold)');
 
-  // Check promotion
   const snap = await dbGet(dbRef(db, `proposals/${proposalId}`));
   const proposal = snap.val();
   if (!proposal) return;
@@ -1213,6 +1571,8 @@ async function castVote(proposalId) {
 async function promoteProposal(id, proposal) {
   await dbSet(dbRef(db, `approved/${id}`), { ...proposal, approvedAt: Date.now() });
   await dbRemove(dbRef(db, `proposals/${id}`));
+  await pushNotif(`▸ "${proposal.title}" è stata approvata`, 'var(--gold)');
+  showToast(`▸ "${proposal.title}" approvata!`, 'var(--gold)');
 }
 
 async function castChangeVote(proposalId, changeId) {
@@ -1224,8 +1584,8 @@ async function castChangeVote(proposalId, changeId) {
     dbRef(db, `approved/${proposalId}/changeProposals/${changeId}/votes`),
     { [currentNick]: score }
   );
+  showToast(`▸ voto modifica registrato: ${score}`, 'var(--gold)');
 
-  // Check if change should replace original
   const snap = await dbGet(dbRef(db, `approved/${proposalId}`));
   const original = snap.val();
   if (!original) return;
@@ -1236,15 +1596,14 @@ async function castChangeVote(proposalId, changeId) {
   const changeData = original.changeProposals?.[changeId];
   if (!changeData) return;
 
-  const changeVotes = changeData.votes || {};
-  const origVotes   = original.votes || {};
-  const changeAvg = computeAvg(changeVotes);
-  const origAvg   = computeAvg(origVotes);
+  const changeVotes    = changeData.votes || {};
+  const origVotes      = original.votes || {};
+  const changeAvg      = computeAvg(changeVotes);
+  const origAvg        = computeAvg(origVotes);
   const changeVoteCount = Object.keys(changeVotes).length;
 
   if (changeVoteCount >= memberCount && changeAvg !== null && origAvg !== null
       && changeAvg >= origAvg + CHANGE_DELTA) {
-    // Replace original with change
     const { changeProposals, ...rest } = original;
     await dbSet(dbRef(db, `approved/${proposalId}`), {
       ...rest,
@@ -1255,6 +1614,7 @@ async function castChangeVote(proposalId, changeId) {
       replacedAt: Date.now(),
       changeProposals: {}
     });
+    await pushNotif(`▸ "${changeData.title}" ha sostituito la versione precedente`, 'var(--gold)');
   }
 }
 
@@ -1280,8 +1640,8 @@ async function submitProposal() {
   const desc  = document.getElementById('form-desc').value.trim();
   if (!title || !desc) return;
 
-  const ref = dbPush(dbRef(db, 'proposals'));
-  await dbSet(ref, {
+  const r = dbPush(dbRef(db, 'proposals'));
+  await dbSet(r, {
     category: cat, title, description: desc,
     proposer: currentNick,
     votes: {}, changeProposals: {},
@@ -1291,6 +1651,8 @@ async function submitProposal() {
   document.getElementById('form-title').value = '';
   document.getElementById('form-desc').value = '';
   closeModal('modal-proposal');
+  showToast(`▸ proposta inviata: "${title}"`);
+  await pushNotif(`▸ ${currentNick} ha proposto: "${title}"`);
 }
 
 async function submitChange() {
@@ -1299,8 +1661,8 @@ async function submitChange() {
   const desc     = document.getElementById('change-desc').value.trim();
   if (!title || !desc || !targetId) return;
 
-  const ref = dbPush(dbRef(db, `approved/${targetId}/changeProposals`));
-  await dbSet(ref, {
+  const r = dbPush(dbRef(db, `approved/${targetId}/changeProposals`));
+  await dbSet(r, {
     title, description: desc,
     proposer: currentNick,
     votes: {},
@@ -1308,6 +1670,8 @@ async function submitChange() {
   });
 
   closeModal('modal-change');
+  showToast(`▸ modifica proposta: "${title}"`);
+  await pushNotif(`▸ ${currentNick} ha proposto una modifica: "${title}"`);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1319,6 +1683,7 @@ function switchTab(tab, btn) {
   btn.classList.add('active');
   document.getElementById('tab-proposals').style.display = tab==='proposals' ? '' : 'none';
   document.getElementById('tab-approved').style.display  = tab==='approved'  ? '' : 'none';
+  document.getElementById('tab-members').style.display   = tab==='members'   ? '' : 'none';
 }
 
 // ═══════════════════════════════════════════════════
@@ -1336,6 +1701,89 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
     if (e.target === el) el.classList.remove('active');
   });
 });
+
+// ═══════════════════════════════════════════════════
+// PROFILE PANEL
+// ═══════════════════════════════════════════════════
+let _pinRevealed = false;
+let _plainPin    = null; // stored in memory only after first reveal attempt
+
+function toggleProfile() {
+  const panel = document.getElementById('profile-panel');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : '';
+  if (!isOpen) refreshProfilePanel();
+}
+
+function refreshProfilePanel() {
+  document.getElementById('profile-nick-display').textContent = currentNick;
+
+  // Joined date
+  const memberData = _members[currentNick];
+  if (memberData && memberData.joinedAt) {
+    const d = new Date(memberData.joinedAt);
+    document.getElementById('profile-joined').textContent =
+      d.toLocaleDateString('it-IT', { day:'2-digit', month:'long', year:'numeric' });
+  }
+
+  // Stats from cached data
+  const stats = computeMyStats();
+  document.getElementById('profile-stat-proposals').textContent = stats.proposals;
+  document.getElementById('profile-stat-changes').textContent   = stats.changes;
+  document.getElementById('profile-stat-votes').textContent     = stats.votes;
+
+  // PIN — reset to hidden on every open
+  _pinRevealed = false;
+  document.getElementById('profile-pin').textContent = '••••';
+  document.getElementById('pin-reveal-btn').textContent = 'mostra';
+}
+
+function computeMyStats() {
+  const s = { proposals: 0, changes: 0, votes: 0 };
+  for (const p of Object.values(_proposals)) {
+    if (p.proposer === currentNick) s.proposals++;
+    if (p.votes && p.votes[currentNick] !== undefined) s.votes++;
+  }
+  for (const p of Object.values(_approved)) {
+    if (p.proposer === currentNick) s.proposals++;
+    if (p.votes && p.votes[currentNick] !== undefined) s.votes++;
+    for (const c of Object.values(p.changeProposals || {})) {
+      if (c.proposer === currentNick) s.changes++;
+      if (c.votes && c.votes[currentNick] !== undefined) s.votes++;
+    }
+  }
+  return s;
+}
+
+async function togglePinReveal() {
+  const pinEl  = document.getElementById('profile-pin');
+  const btn    = document.getElementById('pin-reveal-btn');
+
+  if (_pinRevealed) {
+    pinEl.textContent = '••••';
+    btn.textContent   = 'mostra';
+    _pinRevealed      = false;
+    return;
+  }
+
+  // Try to recover plain PIN: we only have the hash, so we need the user to
+  // re-enter it once per session, OR we store it transiently in memory at login.
+  if (_plainPin) {
+    pinEl.textContent = _plainPin;
+    btn.textContent   = 'nascondi';
+    _pinRevealed      = true;
+  } else {
+    pinEl.textContent = '?';
+    btn.textContent   = 'non disponibile';
+    btn.title         = 'il PIN è stato mostrato solo alla registrazione. se lo hai perso, crea un nuovo account.';
+  }
+}
+
+// Called right after successful login to cache PIN in memory (new users only)
+function cacheNewPin(pin) {
+  _plainPin = pin;
+}
 </script>
+<div id="toast-container"></div>
 </body>
 </html>
