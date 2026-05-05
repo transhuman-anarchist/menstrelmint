@@ -905,23 +905,27 @@ const CHANGE_DELTA = 0.5;
 const PROPOSER_CAP = 8.5;
 
 // ═══════════════════════════════════════════════════
-// FIREBASE INIT
+// FIREBASE INIT — polling robusto
 // ═══════════════════════════════════════════════════
 function initFirebase() {
-  db = window._db;
-  dbRef = window._dbRef;
-  dbSet = window._dbSet;
-  dbGet = window._dbGet;
-  dbOnValue = window._dbOnValue;
-  dbPush = window._dbPush;
+  db       = window._db;
+  dbRef    = window._dbRef;
+  dbSet    = window._dbSet;
+  dbGet    = window._dbGet;
+  dbOnValue= window._dbOnValue;
+  dbPush   = window._dbPush;
   dbUpdate = window._dbUpdate;
   dbRemove = window._dbRemove;
 }
 
-document.addEventListener('firebaseReady', () => {
-  initFirebase();
-  if (currentNick) startApp();
-});
+function waitFirebase(cb) {
+  if (window._firebaseReady) { initFirebase(); cb(); return; }
+  const iv = setInterval(() => {
+    if (window._firebaseReady) { clearInterval(iv); initFirebase(); cb(); }
+  }, 100);
+}
+
+function encodeNick(n) { return n.replace(/[.#$\[\]]/g, '_'); }
 
 // ═══════════════════════════════════════════════════
 // LANDING → NICKNAME → APP
@@ -932,9 +936,11 @@ function enterApp() {
   setTimeout(() => {
     landing.style.display = 'none';
     if (currentNick) {
-      showApp();
+      waitFirebase(() => showApp());
     } else {
-      document.getElementById('screen-nickname').classList.add('active');
+      const ns = document.getElementById('screen-nickname');
+      ns.style.opacity = '1';
+      ns.style.pointerEvents = 'all';
       document.getElementById('nick-input').focus();
     }
   }, 1200);
@@ -944,18 +950,23 @@ async function confirmNick() {
   const val = document.getElementById('nick-input').value.trim();
   const err = document.getElementById('nick-error');
   if (!val) { err.textContent = '▸ inserisci un nome'; return; }
-  if (!db) { err.textContent = '▸ firebase non connesso'; return; }
-
-  const snap = await dbGet(dbRef(db, `members/${val}`));
-  if (snap.exists()) {
-    err.textContent = '▸ nome già in uso';
-    return;
-  }
-  await dbSet(dbRef(db, `members/${val}`), { joinedAt: Date.now() });
-  localStorage.setItem('mnick', val);
-  currentNick = val;
-  document.getElementById('screen-nickname').classList.remove('active');
-  showApp();
+  err.textContent = '▸ connessione in corso…';
+  waitFirebase(async () => {
+    try {
+      const key = encodeNick(val);
+      const snap = await dbGet(dbRef(db, 'members/' + key));
+      if (snap.exists()) { err.textContent = '▸ nome già in uso'; return; }
+      await dbSet(dbRef(db, 'members/' + key), { joinedAt: Date.now(), display: val });
+      localStorage.setItem('mnick', val);
+      currentNick = val;
+      const ns = document.getElementById('screen-nickname');
+      ns.style.opacity = '0';
+      ns.style.pointerEvents = 'none';
+      showApp();
+    } catch(e) {
+      err.textContent = '▸ errore: ' + e.message;
+    }
+  });
 }
 
 function showApp() {
