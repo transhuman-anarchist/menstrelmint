@@ -60,6 +60,14 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
   text-align:center;padding:.5rem 1rem;outline:none;width:220px}
 .pw-input::placeholder{color:#3a3a3a;letter-spacing:.2em}
 .pw-error{font-size:.6rem;letter-spacing:.2em;color:#8b0000;margin-top:.8rem;min-height:1em}
+.pw-btn{margin-top:1.2rem;padding:.7rem 2.4rem;background:transparent;border:1px solid #8b0000;
+  color:#d4c9b8;font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.3em;
+  text-transform:uppercase;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.pw-btn::before{content:'';position:absolute;inset:0;background:#8b0000;transform:scaleX(0);
+  transform-origin:left;transition:transform .25s;z-index:-1}
+.pw-btn:hover{color:#fff;border-color:#c41e3a}
+.pw-btn:hover::before{transform:scaleX(1)}
+.pw-btn:active{transform:scale(.97)}
 
 /* LANDING */
 #screen-landing{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;
@@ -289,6 +297,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
     placeholder="password"
     onkeydown="if(event.key==='Enter')checkPassword()"/>
   <p class="pw-error" id="pw-error"></p>
+  <button class="pw-btn" onclick="checkPassword()">▸ entra</button>
 </div>
 
 <div id="screen-landing" style="display:none">
