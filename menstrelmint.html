@@ -573,7 +573,23 @@ async function loginUser(){
 }
 
 // ── APP
+function logout(){
+  localStorage.removeItem('mnick');
+  localStorage.removeItem('mpin');
+  currentNick=null;currentPin=null;
+  location.reload();
+}
+
 function showApp(){
+  // Verify user still exists on Firebase before entering
+  waitFB(async()=>{
+    const key=encKey(currentNick);
+    const snap=await dbGet(dbRef(db,'members/'+key));
+    if(!snap.exists()){
+      logout();
+      return;
+    }
+  });
   document.getElementById('display-nick').textContent=currentNick;
   document.getElementById('profile-name').textContent=currentNick;
   document.getElementById('status-bar').style.display='flex';
